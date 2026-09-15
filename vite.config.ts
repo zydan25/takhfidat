@@ -3,9 +3,28 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+const injectReactEntry = () => ({
+  name: 'inject-react-entry-for-build',
+  transformIndexHtml: {
+    order: 'pre',
+    handler(html: string, ctx: { bundle?: unknown }) {
+      if (!ctx.bundle) return html;
+      const scriptPattern = /<script\s+type="module"[^>]*src="[^"]+"[^>]*><\/script>/i;
+      const cssPattern = /<link\s+rel="stylesheet"[^>]*href="[^"]+"[^>]*>/i;
+      const withoutLegacyEntries = html
+        .replace(scriptPattern, '')
+        .replace(cssPattern, '');
+      return withoutLegacyEntries.replace(
+        '</head>',
+        '    <script type="module" src="/src/main.tsx"></script>\n  </head>'
+      );
+    },
+  },
+});
+
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), injectReactEntry()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
